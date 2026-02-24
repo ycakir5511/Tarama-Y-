@@ -3,138 +3,147 @@ import pandas as pd
 import time
 from tradingview_ta import get_multiple_analysis, Interval
 
-# --- SAYFA AYARLARI ---
-st.set_page_config(page_title="BIST Analiz v2.1", layout="wide")
+# --- SAYFA KONFİGÜRASYONU ---
+st.set_page_config(page_title="BIST Analiz v2.5", layout="wide")
 
-# CSS: Buton ve Arayüz Güzelleştirme
-st.markdown("""
-    <style>
-    .stButton>button { width: 100%; border-radius: 8px; height: 3em; transition: 0.3s; }
-    .stButton>button:hover { border-color: #ffd700; color: #ffd700; }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- VERİ SETLERİ ---
+# Liste PyQt6 kodundaki ile aynıdır
 BIST_30 = ["AKBNK", "ALARK", "ARCLK", "ASELS", "ASTOR", "BIMAS", "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAL", "KOZAA", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TAVHL", "TCELL", "THYAO", "TOASO", "TUPRS"]
 BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "ENJSA", "EUPWR", "EUREN", "FENER", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GWIND", "HALKB", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONYA", "KORDS", "KRYPT", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ONCSM", "ORGE", "OTKAR", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAYAS", "SDTTR", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TKFEN", "TKNSA", "TMSN", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
 
-# --- ANALİZ FONKSİYONLARI ---
-def fetch_data(hisse_listesi, mode="normal", periyot=Interval.INTERVAL_1_HOUR):
+# --- İSTEK MANTIĞI (PYQT6 İLE AYNI) ---
+
+def run_normal_scan(liste, periyot):
     sonuclar = []
-    limit = 50 # Paket boyutunu 100'den 50'ye düşürdük (daha stabil)
-    paketler = [hisse_listesi[i:i + limit] for i in range(0, len(hisse_listesi), limit)]
+    limit = 100 # PyQt6'daki paket limiti
+    paketler = [liste[i:i + limit] for i in range(0, len(liste), limit)]
     
     p_bar = st.progress(0)
-    status_text = st.empty()
-    
     for idx, paket in enumerate(paketler):
         tv_hisseler = [f"BIST:{h}" for h in paket]
         try:
-            status_text.text(f"İşleniyor: Paket {idx+1}/{len(paketler)}...")
-            
-            if mode == "normal":
-                analizler = get_multiple_analysis(screener="turkey", interval=periyot, symbols=tv_hisseler)
-                if analizler:
-                    for symbol, analiz in analizler.items():
-                        if analiz:
-                            ind = analiz.indicators
-                            sonuclar.append({
-                                "Hisse": symbol.split(":")[1],
-                                "Fiyat": round(ind.get("close", 0) or 0, 2),
-                                "Değişim %": round(ind.get("change", 0) or 0, 2),
-                                "RSI": round(ind.get("RSI", 100) or 100, 2)
-                            })
-            else: # Altın Vuruş Modu
-                a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=tv_hisseler)
-                time.sleep(0.3) # API'yi dinlendir
-                a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=tv_hisseler)
-                time.sleep(0.3)
-                a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=tv_hisseler)
-
-                for s in tv_hisseler:
-                    if s in a1s and s in a4s and s in a1g:
-                        if a1s[s] and a4s[s] and a1g[s]:
-                            r1, r4, rg = a1s[s].indicators.get("RSI", 100), a4s[s].indicators.get("RSI", 100), a1g[s].indicators.get("RSI", 100)
-                            if r1 < 40 and r4 < 40 and rg < 40:
-                                sonuclar.append({
-                                    "Hisse": s.split(":")[1],
-                                    "Fiyat": round(a1s[s].indicators.get("close", 0) or 0, 2),
-                                    "RSI (1S)": round(r1 or 0, 2),
-                                    "RSI (4S)": round(r4 or 0, 2),
-                                    "RSI (1G)": round(rg or 0, 2)
-                                })
-            
-            time.sleep(0.6) # Her paketten sonra bekleme süresini artırdık
-        except Exception as e:
-            st.warning(f"Bağlantı hatası: {idx+1}. paket atlandı.")
-            continue
-            
+            # get_multiple_analysis kullanımı PyQt6 VeriCekici sınıfı ile aynı
+            analizler = get_multiple_analysis(screener="turkey", interval=periyot, symbols=tv_hisseler)
+            if analizler:
+                for symbol, analiz in analizler.items():
+                    if analiz is None: continue
+                    ind = analiz.indicators
+                    sonuclar.append({
+                        "Hisse": symbol.split(":")[1],
+                        "Fiyat": round(ind.get("close", 0) or 0, 2),
+                        "Değişim %": round(ind.get("change", 0) or 0, 2),
+                        "RSI": round(ind.get("RSI", 0) or 0, 2)
+                    })
+            time.sleep(0.4) # PyQt6'daki bekleme süresi
+        except: continue
         p_bar.progress((idx + 1) / len(paketler))
+    return pd.DataFrame(sonuclar)
+
+def run_altin_scan(liste):
+    sonuclar = []
+    limit = 100 # PyQt6'daki paket limiti
+    paketler = [liste[i:i + limit] for i in range(0, len(liste), limit)]
     
-    status_text.empty()
+    p_bar = st.progress(0)
+    for idx, paket in enumerate(paketler):
+        tv_hisseler = [f"BIST:{h}" for h in paket]
+        try:
+            # 3 Farklı periyotta analiz - PyQt6 AltinVurusWorker ile aynı
+            a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=tv_hisseler)
+            a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=tv_hisseler)
+            a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=tv_hisseler)
+
+            for s in tv_hisseler:
+                try:
+                    a1, a4, ag = a1s.get(s), a4s.get(s), a1g.get(s)
+                    if not (a1 and a4 and ag): continue
+                    
+                    r1, r4, rg = a1.indicators.get("RSI", 100), a4.indicators.get("RSI", 100), ag.indicators.get("RSI", 100)
+                    fiyat = a1.indicators.get("close", 0)
+
+                    # Kriter: 3 periyotta da RSI < 40 (Kodundaki gibi)
+                    if r1 < 40 and r4 < 40 and rg < 40:
+                        sonuclar.append({
+                            "Hisse": s.split(":")[1],
+                            "Fiyat": round(fiyat, 2),
+                            "RSI (1S)": round(r1, 2),
+                            "RSI (4S)": round(r4, 2),
+                            "RSI (1G)": round(rg, 2)
+                        })
+                except: continue
+            time.sleep(0.5) # PyQt6'daki bekleme süresi
+        except: continue
+        p_bar.progress((idx + 1) / len(paketler))
     return pd.DataFrame(sonuclar)
 
 # --- ARAYÜZ ---
-st.title("🎯 BIST Analiz - Altın Vuruş v2.1")
 
-c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
-with c1:
-    evren = st.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
-with c2:
-    periyot_str = st.selectbox("Periyot", ["1 Saat", "4 Saat", "1 Gün", "1 Hafta", "1 Ay"])
+st.title("🎯 BIST Analiz - Altın Vuruş (PyQt6 Engine)")
+
+# Kontrol Paneli
+col1, col2, col3, col4 = st.columns([2,2,2,2])
+
+with col1:
+    e_sel = st.selectbox("Evren", ["BIST 30", "BIST TÜM"])
+with col2:
+    p_sel_text = st.selectbox("Periyot", ["1 Saat", "4 Saat", "1 Gün", "1 Hafta", "1 Ay"])
     p_map = {"1 Saat": Interval.INTERVAL_1_HOUR, "4 Saat": Interval.INTERVAL_4_HOURS, "1 Gün": Interval.INTERVAL_1_DAY, "1 Hafta": Interval.INTERVAL_1_WEEK, "1 Ay": Interval.INTERVAL_1_MONTH}
-with c3:
+with col3:
     st.write(" ")
-    btn_normal = st.button("🚀 Normal Analiz")
-with c4:
+    btn_run = st.button("🚀 Analizi Başlat", use_container_width=True)
+with col4:
     st.write(" ")
-    btn_altin = st.button("🎯 ALTIN VURUŞ")
+    btn_altin = st.button("🎯 ALTIN VURUŞ", use_container_width=True)
 
 st.divider()
 
-f1, f2 = st.columns([3, 5])
-with f1:
-    rsi_filtre = st.toggle("📉 Sadece RSI < 35 Filtresi", value=False)
-with f2:
+# Arama ve Hızlı Filtre (Sadece sonuç varsa çalışır)
+search_col, filter_col = st.columns([2,1])
+with search_col:
     search_query = st.text_input("🔍 Hisse Ara...", "").upper()
+with filter_col:
+    rsi_filter = st.checkbox("📉 RSI < 35 Filtrele")
 
 # --- TETİKLEYİCİLER ---
-hisseler = BIST_30 if evren == "BIST 30" else BIST_TUM
 
-if btn_normal:
-    # Eski veriyi temizle ve yeni çek
-    st.session_state['data'] = fetch_data(hisseler, mode="normal", periyot=p_map[periyot_str])
-    st.session_state['mode'] = 'normal'
+target_list = BIST_30 if e_sel == "BIST 30" else BIST_TUM
+
+if btn_run:
+    st.session_state['res'] = run_normal_scan(target_list, p_map[p_sel_text])
+    st.session_state['mode'] = "normal"
 
 if btn_altin:
-    st.session_state['data'] = fetch_data(hisseler, mode="altin")
-    st.session_state['mode'] = 'altin'
+    st.session_state['res'] = run_altin_scan(BIST_TUM)
+    st.session_state['mode'] = "altin"
 
-# --- GÖRÜNTÜLEME ---
-if 'data' in st.session_state and not st.session_state['data'].empty:
-    df_final = st.session_state['data'].copy()
+# --- SONUÇLARI GÖSTER (STYLING) ---
 
-    # Filtreler
-    if rsi_filtre:
-        col = 'RSI' if st.session_state['mode'] == 'normal' else 'RSI (1S)'
-        df_final = df_final[df_final[col] < 35]
+if 'res' in st.session_state:
+    df = st.session_state['res'].copy()
+    
+    # Filtreleme mantığı (PyQt6 run_all_filters ile aynı)
+    if rsi_filter:
+        col_name = "RSI" if st.session_state['mode'] == "normal" else "RSI (1S)"
+        df = df[df[col_name] < 35]
     
     if search_query:
-        df_final = df_final[df_final['Hisse'].str.contains(search_query)]
+        df = df[df['Hisse'].str.contains(search_query)]
 
-    st.subheader(f"📊 Sonuçlar ({len(df_final)} Hisse)")
+    # Renklendirme mantığı (PyQt6 add_row ile aynı)
+    def apply_style(x):
+        style_df = pd.DataFrame('', index=x.index, columns=x.columns)
+        
+        if st.session_state['mode'] == "normal":
+            # Değişim rengi
+            style_df['Değişim %'] = x['Değişim %'].apply(lambda v: 'color: #2e7d32' if v > 0 else ('color: #c62828' if v < 0 else ''))
+            # RSI Arkaplanı
+            style_df['RSI'] = x['RSI'].apply(lambda v: 'background-color: #c8e6c9' if v < 30 else ('background-color: #ffcdd2' if v > 70 else ''))
+        else:
+            # Altın Vuruş Stili
+            style_df['Hisse'] = 'background-color: #ffd700; color: black; font-weight: bold'
+            for c in ["RSI (1S)", "RSI (4S)", "RSI (1G)"]:
+                style_df[c] = 'background-color: #fff9c4; color: black'
+        
+        return style_df
 
-    # Renklendirme
-    def style_df(x):
-        c = pd.DataFrame('', index=x.index, columns=x.columns)
-        if 'RSI' in x.columns:
-            c.loc[x['RSI'] < 35, 'RSI'] = 'background-color: #d4edda; color: #155724'
-        if 'Hisse' in x.columns and st.session_state['mode'] == 'altin':
-            c['Hisse'] = 'background-color: #fff3cd; font-weight: bold'
-        return c
-
-    st.dataframe(df_final.style.apply(style_df, axis=None), use_container_width=True, height=500)
-elif 'data' in st.session_state:
-    st.warning("Kriterlere uygun hisse bulunamadı veya veri çekilemedi.")
-else:
-    st.info("Lütfen bir analiz başlatın.")
+    st.dataframe(df.style.apply(apply_style, axis=None), use_container_width=True, height=600)
+    st.success(f"İşlem Tamamlandı: {len(df)} hisse bulundu.")

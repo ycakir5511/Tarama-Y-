@@ -26,13 +26,12 @@ periyot_map = {
 
 if tarama_modu == "Normal Tarama":
     secili_periyot = st.sidebar.selectbox("Periyot Seçin", list(periyot_map.keys()))
-    rsi_esik = 35
 else:
-    rsi_esik = 40
+    st.sidebar.info("Altın Vuruş: 1S-4S-1G periyotlarında RSI < 40")
 
 baslat = st.sidebar.button("🚀 Analizi Başlat")
 
-# --- FONKSİYONLAR ---
+# --- ANALİZ FONKSİYONLARI ---
 def normal_tarama(liste, periyot_str):
     veriler = []
     tv_periyot = periyot_map[periyot_str]
@@ -46,7 +45,8 @@ def normal_tarama(liste, periyot_str):
             for s, a in analizler.items():
                 if a:
                     rsi = a.indicators.get("RSI", 0)
-                    if rsi < 35: # Sadece 35 altını hafızaya al
+                    # Sadece 35 altındakileri listeye dahil et
+                    if rsi < 35:
                         veriler.append({
                             "Hisse": s.split(":")[1], 
                             "Fiyat": round(a.indicators.get("close", 0), 2), 
@@ -86,7 +86,7 @@ def altin_vurus_tarama(liste):
         time.sleep(0.5)
     return veriler
 
-# --- ANA EKRAN ---
+# --- ANA EKRAN MANTIĞI ---
 if baslat:
     secili_liste = BIST_30 if hisse_grubu == "BIST 30" else BIST_TUM
     
@@ -94,17 +94,16 @@ if baslat:
         res = normal_tarama(secili_liste, secili_periyot)
         if res:
             df = pd.DataFrame(res)
-            # HIZLI FİLTRE BUTONU (Checkbox olarak sonuçların tepesine eklenir)
-            st.subheader(f"📊 Normal Tarama Sonuçları (RSI < 35)")
-            hizli_filtre = st.toggle("📉 Sadece Kritik Seviyeleri Göster (RSI < 25)")
+            st.subheader(f"📊 Normal Tarama: {secili_periyot} RSI < 35")
+            
+            # İSTEDİĞİNİZ DEĞİŞİKLİK: Filtre değeri 35 yapıldı
+            hizli_filtre = st.toggle("📉 Sadece RSI < 35 Olanları Göster", value=True)
             
             if hizli_filtre:
-                df = df[df["RSI"] < 25]
-                st.caption("Şu an sadece RSI değeri 25'in altında olan çok ucuz hisseler gösteriliyor.")
-
+                df = df[df["RSI"] < 35]
+            
             st.dataframe(df, use_container_width=True)
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Listeyi İndir", csv, "normal_tarama.csv", "text/csv")
+            st.download_button("📥 Listeyi İndir", df.to_csv(index=False).encode('utf-8'), "normal_35.csv", "text/csv")
         else:
             st.warning("RSI < 35 kriterinde hisse bulunamadı.")
 
@@ -112,11 +111,10 @@ if baslat:
         res = altin_vurus_tarama(secili_liste)
         if res:
             df = pd.DataFrame(res)
-            st.subheader(f"🎯 Altın Vuruş Sonuçları (3 Periyot RSI < 40)")
+            st.subheader("🎯 Altın Vuruş: 3 Zaman Diliminde RSI < 40")
             st.dataframe(df, use_container_width=True)
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Listeyi İndir", csv, "altin_vurus.csv", "text/csv")
+            st.download_button("📥 Listeyi İndir", df.to_csv(index=False).encode('utf-8'), "altin_vurus.csv", "text/csv")
         else:
             st.warning("Altın Vuruş kriterlerine uygun hisse bulunamadı.")
 else:
-    st.info("Ayarları seçtikten sonra 'Analizi Başlat' butonuna basın.")
+    st.info("Ayarları seçip 'Analizi Başlat' butonuna tıklayın.")

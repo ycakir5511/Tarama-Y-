@@ -4,7 +4,7 @@ import time
 from tradingview_ta import get_multiple_analysis, Interval
 
 # Sayfa Ayarları
-st.set_page_config(page_title="BIST Teknik Analiz", layout="wide")
+st.set_page_config(page_title="BIST Analiz Paneli", layout="wide")
 
 st.title("📈 BIST Teknik Analiz Paneli")
 
@@ -12,8 +12,8 @@ st.title("📈 BIST Teknik Analiz Paneli")
 BIST_30 = ["AKBNK", "ALARK", "ARCLK", "ASELS", "ASTOR", "BIMAS", "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAL", "KOZAA", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TAVHL", "TCELL", "THYAO", "TOASO", "TUPRS"]
 BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARCLK", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "EKGYO", "ENJSA", "ENKAI", "EREGL", "EUPWR", "EUREN", "FENER", "FROTO", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GUBRF", "GWIND", "HALKB", "HEKTS", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISCTR", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KCHOL", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONTR", "KONYA", "KORDS", "KOZAA", "KOZAL", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ODAS", "ONCSM", "ORGE", "OTKAR", "OYAKC", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PETKM", "PGSUS", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAHOL", "SASA", "SAYAS", "SDTTR", "SISE", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TAVHL", "TCELL", "THYAO", "TKFEN", "TKNSA", "TMSN", "TOASO", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TUPRS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
 
-# --- KENAR ÇUBUĞU ---
-st.sidebar.header("⚙️ Menü")
+# --- ANA MENÜ (SIDEBAR) ---
+st.sidebar.header("⚙️ Tarama Ayarları")
 tarama_modu = st.sidebar.radio("Tarama Modu", ["Normal Tarama", "Altın Vuruş (3 Periyot)"])
 hisse_grubu = st.sidebar.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
 
@@ -24,15 +24,19 @@ periyot_map = {
     "1 Hafta": Interval.INTERVAL_1_WEEK
 }
 
+# --- MENÜYE EKLENEN FİLTRE BUTONU ---
 if tarama_modu == "Normal Tarama":
     secili_periyot = st.sidebar.selectbox("Periyot Seçin", list(periyot_map.keys()))
+    # Menüde filtre seçeneği
+    rsi_35_filtre = st.sidebar.toggle("📉 Sadece RSI < 35 Getir", value=True)
 else:
     st.sidebar.info("Altın Vuruş: 1S-4S-1G periyotlarında RSI < 40")
+    rsi_35_filtre = True # Altın vuruşta zaten sistem otomatik eliyor
 
 baslat = st.sidebar.button("🚀 Analizi Başlat")
 
 # --- ANALİZ FONKSİYONLARI ---
-def normal_tarama(liste, periyot_str):
+def normal_tarama(liste, periyot_str, filtre_aktif):
     veriler = []
     tv_periyot = periyot_map[periyot_str]
     paketler = [liste[i:i + 100] for i in range(0, len(liste), 100)]
@@ -45,14 +49,16 @@ def normal_tarama(liste, periyot_str):
             for s, a in analizler.items():
                 if a:
                     rsi = a.indicators.get("RSI", 0)
-                    # Sadece 35 altındakileri listeye dahil et
-                    if rsi < 35:
-                        veriler.append({
-                            "Hisse": s.split(":")[1], 
-                            "Fiyat": round(a.indicators.get("close", 0), 2), 
-                            "Değişim %": round(a.indicators.get("change", 0), 2), 
-                            "RSI": round(rsi, 2)
-                        })
+                    # Eğer menüdeki filtre aktifse 35 altını süz, değilse hepsini getir
+                    if filtre_aktif:
+                        if rsi >= 35: continue
+                    
+                    veriler.append({
+                        "Hisse": s.split(":")[1], 
+                        "Fiyat": round(a.indicators.get("close", 0), 2), 
+                        "Değişim %": round(a.indicators.get("change", 0), 2), 
+                        "RSI": round(rsi, 2)
+                    })
         except: continue
         p_bar.progress((idx + 1) / len(paketler))
         time.sleep(0.4)
@@ -86,35 +92,28 @@ def altin_vurus_tarama(liste):
         time.sleep(0.5)
     return veriler
 
-# --- ANA EKRAN MANTIĞI ---
+# --- ANA EKRAN ---
 if baslat:
     secili_liste = BIST_30 if hisse_grubu == "BIST 30" else BIST_TUM
     
     if tarama_modu == "Normal Tarama":
-        res = normal_tarama(secili_liste, secili_periyot)
+        res = normal_tarama(secili_liste, secili_periyot, rsi_35_filtre)
         if res:
             df = pd.DataFrame(res)
-            st.subheader(f"📊 Normal Tarama: {secili_periyot} RSI < 35")
-            
-            # İSTEDİĞİNİZ DEĞİŞİKLİK: Filtre değeri 35 yapıldı
-            hizli_filtre = st.toggle("📉 Sadece RSI < 35 Olanları Göster", value=True)
-            
-            if hizli_filtre:
-                df = df[df["RSI"] < 35]
-            
+            st.subheader(f"📊 Sonuçlar: {secili_periyot}")
             st.dataframe(df, use_container_width=True)
-            st.download_button("📥 Listeyi İndir", df.to_csv(index=False).encode('utf-8'), "normal_35.csv", "text/csv")
+            st.download_button("📥 İndir (CSV)", df.to_csv(index=False).encode('utf-8'), "tarama.csv", "text/csv")
         else:
-            st.warning("RSI < 35 kriterinde hisse bulunamadı.")
+            st.warning("Kriterlere uygun hisse bulunamadı.")
 
     else:
         res = altin_vurus_tarama(secili_liste)
         if res:
             df = pd.DataFrame(res)
-            st.subheader("🎯 Altın Vuruş: 3 Zaman Diliminde RSI < 40")
+            st.subheader("🎯 Altın Vuruş Sonuçları")
             st.dataframe(df, use_container_width=True)
-            st.download_button("📥 Listeyi İndir", df.to_csv(index=False).encode('utf-8'), "altin_vurus.csv", "text/csv")
+            st.download_button("📥 İndir (CSV)", df.to_csv(index=False).encode('utf-8'), "altin_vurus.csv", "text/csv")
         else:
             st.warning("Altın Vuruş kriterlerine uygun hisse bulunamadı.")
 else:
-    st.info("Ayarları seçip 'Analizi Başlat' butonuna tıklayın.")
+    st.info("Ayarları soldaki menüden yapıp 'Analizi Başlat'a tıklayın.")

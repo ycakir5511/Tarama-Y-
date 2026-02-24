@@ -4,167 +4,137 @@ import time
 from tradingview_ta import get_multiple_analysis, Interval
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(page_title="BIST Analiz - Altın Vuruş v2.0", layout="wide")
+st.set_page_config(page_title="BIST Analiz v2.1", layout="wide")
 
-# CSS ile butonları ve tabloları daha şık hale getirelim
+# CSS: Buton ve Arayüz Güzelleştirme
 st.markdown("""
     <style>
-    .stButton>button { width: 100%; border-radius: 5px; height: 3em; }
-    .altin-button { background-color: #ffd700 !important; color: black !important; font-weight: bold !important; }
+    .stButton>button { width: 100%; border-radius: 8px; height: 3em; transition: 0.3s; }
+    .stButton>button:hover { border-color: #ffd700; color: #ffd700; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- VERİ SETLERİ ---
 BIST_30 = ["AKBNK", "ALARK", "ARCLK", "ASELS", "ASTOR", "BIMAS", "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAL", "KOZAA", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TAVHL", "TCELL", "THYAO", "TOASO", "TUPRS"]
-BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARCLK", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "EKGYO", "ENJSA", "ENKAI", "EREGL", "EUPWR", "EUREN", "FENER", "FROTO", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GUBRF", "GWIND", "HALKB", "HEKTS", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISCTR", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KCHOL", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONTR", "KONYA", "KORDS", "KOZAA", "KOZAL", "KRYPT", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ODAS", "ONCSM", "ORGE", "OTKAR", "OYAKC", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PETKM", "PGSUS", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAHOL", "SASA", "SAYAS", "SDTTR", "SISE", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TAVHL", "TCELL", "THYAO", "TKFEN", "TKNSA", "TMSN", "TOASO", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TUPRS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
+BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "ENJSA", "EUPWR", "EUREN", "FENER", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GWIND", "HALKB", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONYA", "KORDS", "KRYPT", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ONCSM", "ORGE", "OTKAR", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAYAS", "SDTTR", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TKFEN", "TKNSA", "TMSN", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
 
 # --- ANALİZ FONKSİYONLARI ---
-def fetch_normal_data(hisse_listesi, periyot):
+def fetch_data(hisse_listesi, mode="normal", periyot=Interval.INTERVAL_1_HOUR):
     sonuclar = []
-    limit = 100
+    limit = 50 # Paket boyutunu 100'den 50'ye düşürdük (daha stabil)
     paketler = [hisse_listesi[i:i + limit] for i in range(0, len(hisse_listesi), limit)]
     
     p_bar = st.progress(0)
-    for idx, paket in enumerate(paketler):
-        tv_hisseler = [f"BIST:{h}" for h in paket]
-        try:
-            analizler = get_multiple_analysis(screener="turkey", interval=periyot, symbols=tv_hisseler)
-            for symbol, analiz in analizler.items():
-                if analiz:
-                    ind = analiz.indicators
-                    sonuclar.append({
-                        "Hisse": symbol.split(":")[1],
-                        "Fiyat": round(ind.get("close", 0), 2),
-                        "Değişim %": round(ind.get("change", 0), 2),
-                        "RSI": round(ind.get("RSI", 100), 2)
-                    })
-            time.sleep(0.4)
-        except: continue
-        p_bar.progress((idx + 1) / len(paketler))
-    return pd.DataFrame(sonuclar)
-
-def fetch_altin_vurus(hisse_listesi):
-    sonuclar = []
-    limit = 100
-    paketler = [hisse_listesi[i:i + limit] for i in range(0, len(hisse_listesi), limit)]
+    status_text = st.empty()
     
-    p_bar = st.progress(0)
     for idx, paket in enumerate(paketler):
         tv_hisseler = [f"BIST:{h}" for h in paket]
         try:
-            a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=tv_hisseler)
-            a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=tv_hisseler)
-            a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=tv_hisseler)
-
-            for s in tv_hisseler:
-                try:
-                    if a1s[s] and a4s[s] and a1g[s]:
-                        r1 = a1s[s].indicators.get("RSI", 100)
-                        r4 = a4s[s].indicators.get("RSI", 100)
-                        rg = a1g[s].indicators.get("RSI", 100)
-                        
-                        if r1 < 40 and r4 < 40 and rg < 40:
+            status_text.text(f"İşleniyor: Paket {idx+1}/{len(paketler)}...")
+            
+            if mode == "normal":
+                analizler = get_multiple_analysis(screener="turkey", interval=periyot, symbols=tv_hisseler)
+                if analizler:
+                    for symbol, analiz in analizler.items():
+                        if analiz:
+                            ind = analiz.indicators
                             sonuclar.append({
-                                "Hisse": s.split(":")[1],
-                                "Fiyat": round(a1s[s].indicators.get("close", 0), 2),
-                                "RSI (1S)": round(r1, 2),
-                                "RSI (4S)": round(r4, 2),
-                                "RSI (1G)": round(rg, 2)
+                                "Hisse": symbol.split(":")[1],
+                                "Fiyat": round(ind.get("close", 0) or 0, 2),
+                                "Değişim %": round(ind.get("change", 0) or 0, 2),
+                                "RSI": round(ind.get("RSI", 100) or 100, 2)
                             })
-                except: continue
-            time.sleep(0.5)
-        except: continue
+            else: # Altın Vuruş Modu
+                a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=tv_hisseler)
+                time.sleep(0.3) # API'yi dinlendir
+                a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=tv_hisseler)
+                time.sleep(0.3)
+                a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=tv_hisseler)
+
+                for s in tv_hisseler:
+                    if s in a1s and s in a4s and s in a1g:
+                        if a1s[s] and a4s[s] and a1g[s]:
+                            r1, r4, rg = a1s[s].indicators.get("RSI", 100), a4s[s].indicators.get("RSI", 100), a1g[s].indicators.get("RSI", 100)
+                            if r1 < 40 and r4 < 40 and rg < 40:
+                                sonuclar.append({
+                                    "Hisse": s.split(":")[1],
+                                    "Fiyat": round(a1s[s].indicators.get("close", 0) or 0, 2),
+                                    "RSI (1S)": round(r1 or 0, 2),
+                                    "RSI (4S)": round(r4 or 0, 2),
+                                    "RSI (1G)": round(rg or 0, 2)
+                                })
+            
+            time.sleep(0.6) # Her paketten sonra bekleme süresini artırdık
+        except Exception as e:
+            st.warning(f"Bağlantı hatası: {idx+1}. paket atlandı.")
+            continue
+            
         p_bar.progress((idx + 1) / len(paketler))
+    
+    status_text.empty()
     return pd.DataFrame(sonuclar)
 
-# --- ARAYÜZ TASARIMI ---
-st.title("🎯 BIST Analiz - Altın Vuruş v2.0")
+# --- ARAYÜZ ---
+st.title("🎯 BIST Analiz - Altın Vuruş v2.1")
 
-# Üst Kontrol Paneli
-with st.container():
-    c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
-    with c1:
-        evren = st.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
-    with c2:
-        periyot_str = st.selectbox("Periyot", ["1 Saat", "4 Saat", "1 Gün", "1 Hafta", "1 Ay"])
-        p_map = {
-            "1 Saat": Interval.INTERVAL_1_HOUR, "4 Saat": Interval.INTERVAL_4_HOURS,
-            "1 Gün": Interval.INTERVAL_1_DAY, "1 Hafta": Interval.INTERVAL_1_WEEK, "1 Ay": Interval.INTERVAL_1_MONTH
-        }
-    with c3:
-        st.write(" ") # Hizalama için
-        btn_normal = st.button("🚀 Analizi Başlat")
-    with c4:
-        st.write(" ") # Hizalama için
-        btn_altin = st.button("🎯 ALTIN VURUŞ", help="3 periyotta da RSI < 40 olanları bulur.")
+c1, c2, c3, c4 = st.columns([2, 2, 2, 2])
+with c1:
+    evren = st.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
+with c2:
+    periyot_str = st.selectbox("Periyot", ["1 Saat", "4 Saat", "1 Gün", "1 Hafta", "1 Ay"])
+    p_map = {"1 Saat": Interval.INTERVAL_1_HOUR, "4 Saat": Interval.INTERVAL_4_HOURS, "1 Gün": Interval.INTERVAL_1_DAY, "1 Hafta": Interval.INTERVAL_1_WEEK, "1 Ay": Interval.INTERVAL_1_MONTH}
+with c3:
+    st.write(" ")
+    btn_normal = st.button("🚀 Normal Analiz")
+with c4:
+    st.write(" ")
+    btn_altin = st.button("🎯 ALTIN VURUŞ")
 
 st.divider()
 
-# Filtreleme Paneli
 f1, f2 = st.columns([3, 5])
 with f1:
-    rsi_filtre = st.toggle("📉 Sadece RSI < 35 olanları göster", value=False)
+    rsi_filtre = st.toggle("📉 Sadece RSI < 35 Filtresi", value=False)
 with f2:
     search_query = st.text_input("🔍 Hisse Ara...", "").upper()
 
-# --- VERİ İŞLEME VE GÖSTERİM ---
+# --- TETİKLEYİCİLER ---
 hisseler = BIST_30 if evren == "BIST 30" else BIST_TUM
 
 if btn_normal:
-    with st.spinner('Normal tarama yapılıyor...'):
-        df = fetch_normal_data(hisseler, p_map[periyot_str])
-        st.session_state['data'] = df
-        st.session_state['mode'] = 'normal'
+    # Eski veriyi temizle ve yeni çek
+    st.session_state['data'] = fetch_data(hisseler, mode="normal", periyot=p_map[periyot_str])
+    st.session_state['mode'] = 'normal'
 
 if btn_altin:
-    with st.spinner('Altın Vuruş taraması yapılıyor (3 periyot kontrolü)...'):
-        df = fetch_altin_vurus(hisseler)
-        st.session_state['data'] = df
-        st.session_state['mode'] = 'altin'
+    st.session_state['data'] = fetch_data(hisseler, mode="altin")
+    st.session_state['mode'] = 'altin'
 
-# Sonuçları Göster
-if 'data' in st.session_state:
-    df_display = st.session_state['data'].copy()
+# --- GÖRÜNTÜLEME ---
+if 'data' in st.session_state and not st.session_state['data'].empty:
+    df_final = st.session_state['data'].copy()
 
-    # Filtre 1: RSI 35 Altı
+    # Filtreler
     if rsi_filtre:
-        if st.session_state['mode'] == 'normal':
-            df_display = df_display[df_display['RSI'] < 35]
-        else:
-            # Altın vuruşta zaten hepsi < 40, 35 altına daha sıkı filtre uygularız
-            df_display = df_display[(df_display['RSI (1S)'] < 35) & (df_display['RSI (4S)'] < 35)]
-
-    # Filtre 2: Arama
+        col = 'RSI' if st.session_state['mode'] == 'normal' else 'RSI (1S)'
+        df_final = df_final[df_final[col] < 35]
+    
     if search_query:
-        df_display = df_display[df_display['Hisse'].str.contains(search_query)]
+        df_final = df_final[df_final['Hisse'].str.contains(search_query)]
 
-    st.subheader(f"📊 Bulunan Hisse Sayısı: {len(df_display)}")
+    st.subheader(f"📊 Sonuçlar ({len(df_final)} Hisse)")
 
-    # Renklendirme ve Stil
-    def highlight_cells(x):
-        color_df = pd.DataFrame('', index=x.index, columns=x.columns)
-        
-        # RSI Renklendirme (Normal Mod)
+    # Renklendirme
+    def style_df(x):
+        c = pd.DataFrame('', index=x.index, columns=x.columns)
         if 'RSI' in x.columns:
-            mask = x['RSI'] < 35
-            color_df.loc[mask, 'RSI'] = 'background-color: #c8e6c9; color: black'
-            mask_high = x['RSI'] > 70
-            color_df.loc[mask_high, 'RSI'] = 'background-color: #ffcdd2; color: black'
-            
-        # Değişim Renklendirme
-        if 'Değişim %' in x.columns:
-            color_df['Değişim %'] = x['Değişim %'].apply(lambda v: 'color: green' if v > 0 else ('color: red' if v < 0 else ''))
+            c.loc[x['RSI'] < 35, 'RSI'] = 'background-color: #d4edda; color: #155724'
+        if 'Hisse' in x.columns and st.session_state['mode'] == 'altin':
+            c['Hisse'] = 'background-color: #fff3cd; font-weight: bold'
+        return c
 
-        # Altın Vuruş Özel Stil
-        if st.session_state['mode'] == 'altin':
-            color_df['Hisse'] = 'background-color: #ffd700; color: black; font-weight: bold'
-            
-        return color_df
-
-    st.dataframe(df_display.style.apply(highlight_cells, axis=None), use_container_width=True, height=600)
-
+    st.dataframe(df_final.style.apply(style_df, axis=None), use_container_width=True, height=500)
+elif 'data' in st.session_state:
+    st.warning("Kriterlere uygun hisse bulunamadı veya veri çekilemedi.")
 else:
-    st.info("Analizi başlatmak için yukarıdaki butonları kullanın.")
-
-st.divider()
-st.caption("Veriler TradingView üzerinden çekilmektedir. Yatırım tavsiyesi değildir.")
+    st.info("Lütfen bir analiz başlatın.")

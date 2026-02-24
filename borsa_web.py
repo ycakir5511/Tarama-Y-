@@ -3,96 +3,115 @@ import pandas as pd
 import time
 from tradingview_ta import get_multiple_analysis, Interval
 
-# Sayfa Genişliği ve Başlık
-st.set_page_config(page_title="BIST Altın Vuruş", layout="wide")
+# Sayfa Ayarları
+st.set_page_config(page_title="BIST Analiz Terminali", layout="wide")
 
-st.title("🎯 BIST Altın Vuruş Tarayıcı")
-st.markdown("1 Saatlik, 4 Saatlik ve Günlük periyotlarda RSI değerine göre aşırı satım bölgesindeki hisseleri bulur.")
+st.title("📈 BIST Teknik Analiz Paneli")
 
 # --- LİSTELER ---
+# (Kısa tutulmuştur, kendi tam listenizi BIST_TUM içine ekleyebilirsiniz)
 BIST_30 = ["AKBNK", "ALARK", "ARCLK", "ASELS", "ASTOR", "BIMAS", "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAL", "KOZAA", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TAVHL", "TCELL", "THYAO", "TOASO", "TUPRS"]
-
-# Örnek BIST Tüm Listesi (Kısaltılmıştır, buraya listenizi ekleyebilirsiniz)
 BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARCLK", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "EKGYO", "ENJSA", "ENKAI", "EREGL", "EUPWR", "EUREN", "FENER", "FROTO", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GUBRF", "GWIND", "HALKB", "HEKTS", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISCTR", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KCHOL", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONTR", "KONYA", "KORDS", "KOZAA", "KOZAL", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ODAS", "ONCSM", "ORGE", "OTKAR", "OYAKC", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PETKM", "PGSUS", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAHOL", "SASA", "SAYAS", "SDTTR", "SISE", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TAVHL", "TCELL", "THYAO", "TKFEN", "TKNSA", "TMSN", "TOASO", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TUPRS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
 
-# --- KENAR ÇUBUĞU (AYARLAR) ---
-st.sidebar.header("⚙️ Tarama Ayarları")
-liste_secimi = st.sidebar.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
-rsi_esik = st.sidebar.slider("RSI Altın Vuruş Eşiği", 10, 50, 40) # 40 varsayılan yapıldı
-baslat = st.sidebar.button("🚀 Taramayı Başlat")
+# --- KENAR ÇUBUĞU (NAVİGASYON) ---
+st.sidebar.header("🛠️ Kontrol Paneli")
+tarama_modu = st.sidebar.radio("Tarama Modu Seçin", ["Normal Tarama", "Altın Vuruş (3 Periyot)"])
 
-# --- ANALİZ FONKSİYONU ---
-def analiz_yap(liste):
-    bulunanlar = []
-    limit = 100
-    paketler = [liste[i:i + limit] for i in range(0, len(liste), limit)]
+hisse_grubu = st.sidebar.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
+
+# Periyot Ayarı (Sadece Normal Tarama için görünür)
+periyot_map = {
+    "1 Saat": Interval.INTERVAL_1_HOUR,
+    "4 Saat": Interval.INTERVAL_4_HOURS,
+    "1 Gün": Interval.INTERVAL_1_DAY,
+    "1 Hafta": Interval.INTERVAL_1_WEEK
+}
+
+if tarama_modu == "Normal Tarama":
+    secili_periyot = st.sidebar.selectbox("Periyot Seçin", list(periyot_map.keys()))
+    rsi_filtre_aktif = st.sidebar.checkbox("Sadece RSI < 40 olanları göster", value=True)
+else:
+    st.sidebar.info("Altın Vuruş Modu: 1S, 4S ve Günlük periyotları aynı anda kontrol eder.")
+    rsi_filtre_aktif = True # Altın vuruşta zaten zorunlu
+
+rsi_esik = st.sidebar.slider("RSI Eşik Değeri", 10, 70, 40)
+baslat = st.sidebar.button("🚀 Analizi Başlat")
+
+# --- FONKSİYONLAR ---
+def normal_tarama(liste, periyot_str):
+    veriler = []
+    tv_periyot = periyot_map[periyot_str]
+    paketler = [liste[i:i + 100] for i in range(0, len(liste), 100)]
     
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
+    p_bar = st.progress(0)
     for idx, paket in enumerate(paketler):
-        status_text.text(f"Paket {idx+1}/{len(paketler)} analiz ediliyor...")
-        tv_hisseler = [f"BIST:{h}" for h in paket]
-        
+        symbols = [f"BIST:{h}" for h in paket]
         try:
-            # 3 Farklı Periyot Sorgusu
-            a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=tv_hisseler)
-            a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=tv_hisseler)
-            a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=tv_hisseler)
-            
-            for symbol in tv_hisseler:
-                try:
-                    res1 = a1s.get(symbol)
-                    res4 = a4s.get(symbol)
-                    resg = a1g.get(symbol)
+            analizler = get_multiple_analysis(screener="turkey", interval=tv_periyot, symbols=symbols)
+            for s, a in analizler.items():
+                if a:
+                    rsi = a.indicators.get("RSI", 0)
+                    fiyat = a.indicators.get("close", 0)
+                    degisim = a.indicators.get("change", 0)
                     
-                    if res1 and res4 and resg:
-                        r1 = res1.indicators.get("RSI")
-                        r4 = res4.indicators.get("RSI")
-                        rg = resg.indicators.get("RSI")
-                        fiyat = res1.indicators.get("close")
-                        
-                        # KRİTER: 3 periyotta da RSI < Eşik (40)
-                        if r1 < rsi_esik and r4 < rsi_esik and rg < rsi_esik:
-                            bulunanlar.append({
-                                "Hisse": symbol.split(":")[1],
-                                "Fiyat": round(fiyat, 2),
-                                "RSI (1S)": round(r1, 2),
-                                "RSI (4S)": round(r4, 2),
-                                "RSI (1G)": round(rg, 2)
-                            })
-                except: continue
+                    data = {"Hisse": s.split(":")[1], "Fiyat": round(fiyat, 2), "Değişim %": round(degisim, 2), "RSI": round(rsi, 2)}
+                    
+                    if rsi_filtre_aktif:
+                        if rsi < rsi_esik: veriler.append(data)
+                    else:
+                        veriler.append(data)
         except: continue
-        
-        progress_bar.progress((idx + 1) / len(paketler))
-        time.sleep(0.5) # API limit koruması
+        p_bar.progress((idx + 1) / len(paketler))
+        time.sleep(0.4)
+    return veriler
 
-    status_text.success("Tarama tamamlandı!")
-    return bulunanlar
-
-# --- ANA EKRAN MANTIĞI ---
-if baslat:
-    secili_liste = BIST_30 if liste_secimi == "BIST 30" else BIST_TUM
-    sonuclar = analiz_yap(secili_liste)
+def altin_vurus_tarama(liste):
+    veriler = []
+    paketler = [liste[i:i + 100] for i in range(0, len(liste), 100)]
     
+    p_bar = st.progress(0)
+    for idx, paket in enumerate(paketler):
+        symbols = [f"BIST:{h}" for h in paket]
+        try:
+            a1s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_HOUR, symbols=symbols)
+            a4s = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_4_HOURS, symbols=symbols)
+            a1g = get_multiple_analysis(screener="turkey", interval=Interval.INTERVAL_1_DAY, symbols=symbols)
+            
+            for s in symbols:
+                r1 = a1s[s].indicators.get("RSI", 100) if a1s[s] else 100
+                r4 = a4s[s].indicators.get("RSI", 100) if a4s[s] else 100
+                rg = a1g[s].indicators.get("RSI", 100) if a1g[s] else 100
+                
+                if r1 < rsi_esik and r4 < rsi_esik and rg < rsi_esik:
+                    veriler.append({
+                        "Hisse": s.split(":")[1],
+                        "Fiyat": round(a1s[s].indicators.get("close", 0), 2),
+                        "RSI (1S)": round(r1, 2),
+                        "RSI (4S)": round(r4, 2),
+                        "RSI (1G)": round(rg, 2)
+                    })
+        except: continue
+        p_bar.progress((idx + 1) / len(paketler))
+        time.sleep(0.5)
+    return veriler
+
+# --- ANA EKRAN ---
+if baslat:
+    liste = BIST_30 if hisse_grubu == "BIST 30" else BIST_TUM
+    
+    if tarama_modu == "Normal Tarama":
+        sonuclar = normal_tarama(liste, secili_periyot)
+    else:
+        sonuclar = altin_vurus_tarama(liste)
+
     if sonuclar:
         df = pd.DataFrame(sonuclar)
+        st.success(f"Tarama tamamlandı! {len(df)} hisse bulundu.")
+        st.dataframe(df, use_container_width=True)
         
-        # Tabloyu özelleştirme
-        st.subheader(f"✅ Kriterlere Uyan {len(df)} Hisse Bulundu")
-        
-        # Renklendirme fonksiyonu
-        def color_rsi(val):
-            color = 'background-color: #c8e6c9' if val < 30 else 'background-color: #fff9c4'
-            return color
-
-        st.dataframe(df.style.applymap(color_rsi, subset=['RSI (1S)', 'RSI (4S)', 'RSI (1G)']))
-        
-        # CSV İndirme Butonu
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Listeyi CSV olarak indir", csv, "altin_vurus_listesi.csv", "text/csv")
+        st.download_button("📥 Sonuçları İndir", csv, "tarama_sonuc.csv", "text/csv")
     else:
-        st.warning("Maalesef hiçbir hisse her üç periyotta da belirlenen RSI eşiğinin altında değil.")
-
+        st.warning("Kriterlere uygun hisse bulunamadı.")
 else:
-    st.info("Taramayı başlatmak için sol taraftaki butona tıklayın.")
+    st.info("Lütfen soldaki menüden tarama modunu seçip 'Analizi Başlat' butonuna basın.")

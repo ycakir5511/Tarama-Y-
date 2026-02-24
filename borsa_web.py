@@ -9,17 +9,15 @@ st.set_page_config(page_title="BIST Analiz Terminali", layout="wide")
 st.title("📈 BIST Teknik Analiz Paneli")
 
 # --- LİSTELER ---
-# (Kısa tutulmuştur, kendi tam listenizi BIST_TUM içine ekleyebilirsiniz)
 BIST_30 = ["AKBNK", "ALARK", "ARCLK", "ASELS", "ASTOR", "BIMAS", "EKGYO", "ENKAI", "EREGL", "FROTO", "GARAN", "GUBRF", "HEKTS", "ISCTR", "KCHOL", "KONTR", "KOZAL", "KOZAA", "ODAS", "OYAKC", "PETKM", "PGSUS", "SAHOL", "SASA", "SISE", "TAVHL", "TCELL", "THYAO", "TOASO", "TUPRS"]
+# BIST_TUM listesini buraya eksiksiz ekleyebilirsiniz.
 BIST_TUM = sorted(list(set(BIST_30 + ["A1CAP", "ACSEL", "ADEL", "ADESE", "AEFES", "AFYON", "AGHOL", "AGROT", "AHGAZ", "AKCNS", "AKENR", "AKFGY", "AKSA", "AKSEN", "ALBRK", "ALFAS", "ALKA", "ALKIM", "ALVES", "ANELE", "ANGEN", "ANHYT", "ANSGR", "ARCLK", "ARDYZ", "ARENA", "ARSAN", "ASGYO", "ASUZU", "ATATP", "AYDEM", "AYGAZ", "BAGFS", "BANVT", "BARMA", "BERA", "BEYAZ", "BFREN", "BIENP", "BIGCH", "BJKAS", "BLCYT", "BOBET", "BORLS", "BRISA", "BRYAT", "BSOKE", "BTCIM", "BUCIM", "CANTE", "CATES", "CCOLA", "CIMSA", "CLEBI", "CONSE", "CVKMD", "CWENE", "DOAS", "DOHOL", "EBEBK", "ECILC", "ECZYT", "EGEEN", "EGGUB", "EGPRO", "EKGYO", "ENJSA", "ENKAI", "EREGL", "EUPWR", "EUREN", "FENER", "FROTO", "GARFA", "GEDIK", "GENIL", "GESAN", "GLYHO", "GOODY", "GOZDE", "GSRAY", "GUBRF", "GWIND", "HALKB", "HEKTS", "HLGYO", "HTTBT", "HUNER", "IHEVA", "IHLAS", "IMASM", "INDES", "INFO", "IPEKE", "ISCTR", "ISFIN", "ISGYO", "ISMEN", "IZENR", "KAREL", "KARSN", "KAYSE", "KCAER", "KCHOL", "KFEIN", "KLGYO", "KLRMP", "KLSYN", "KOCAER", "KONTR", "KONYA", "KORDS", "KOZAA", "KOZAL", "KUTPO", "KUYAS", "KZBGY", "LIDER", "LOGO", "MAVI", "MEGMT", "MIATK", "MPARK", "MSGYO", "MTRKS", "NATEN", "NETAS", "NTGAZ", "NUHCM", "ODAS", "ONCSM", "ORGE", "OTKAR", "OYAKC", "OZKGY", "PAGYO", "PASEU", "PATEK", "PENTA", "PETKM", "PGSUS", "PNLSN", "POLHO", "QUAGR", "REEDR", "RYGYO", "RYSAS", "SAHOL", "SASA", "SAYAS", "SDTTR", "SISE", "SKBNK", "SMART", "SMRTG", "SNGYO", "SOKM", "TABGD", "TARKM", "TATEN", "TAVHL", "TCELL", "THYAO", "TKFEN", "TKNSA", "TMSN", "TOASO", "TRGYO", "TSKB", "TTKOM", "TTRAK", "TUKAS", "TUPRS", "TURSG", "ULKER", "ULUUN", "VAKBN", "VESBE", "VESTL", "YEOTK", "YKBNK", "YYLGD", "ZOREN"])))
 
-# --- KENAR ÇUBUĞU (NAVİGASYON) ---
-st.sidebar.header("🛠️ Kontrol Paneli")
-tarama_modu = st.sidebar.radio("Tarama Modu Seçin", ["Normal Tarama", "Altın Vuruş (3 Periyot)"])
-
+# --- KENAR ÇUBUĞU ---
+st.sidebar.header("⚙️ Ayarlar")
+tarama_modu = st.sidebar.radio("Tarama Modu", ["Normal Tarama", "Altın Vuruş (3 Periyot)"])
 hisse_grubu = st.sidebar.selectbox("Hisse Grubu", ["BIST 30", "BIST TÜM"])
 
-# Periyot Ayarı (Sadece Normal Tarama için görünür)
 periyot_map = {
     "1 Saat": Interval.INTERVAL_1_HOUR,
     "4 Saat": Interval.INTERVAL_4_HOURS,
@@ -27,14 +25,17 @@ periyot_map = {
     "1 Hafta": Interval.INTERVAL_1_WEEK
 }
 
+# RSI Eşiğini 35 Olarak Ayarlıyoruz
+rsi_esik = st.sidebar.slider("RSI Eşik Değeri", 10, 70, 35)
+
 if tarama_modu == "Normal Tarama":
     secili_periyot = st.sidebar.selectbox("Periyot Seçin", list(periyot_map.keys()))
-    rsi_filtre_aktif = st.sidebar.checkbox("Sadece RSI < 40 olanları göster", value=True)
+    # Yazıyı da 35 olarak güncelledik
+    rsi_filtre_aktif = st.sidebar.checkbox(f"Sadece RSI < {rsi_esik} olanları göster", value=True)
 else:
-    st.sidebar.info("Altın Vuruş Modu: 1S, 4S ve Günlük periyotları aynı anda kontrol eder.")
-    rsi_filtre_aktif = True # Altın vuruşta zaten zorunlu
+    st.sidebar.info("Altın Vuruş: 1S, 4S ve Günlük RSI değerlerinin tamamı seçilen eşiğin altında olmalıdır.")
+    rsi_filtre_aktif = True
 
-rsi_esik = st.sidebar.slider("RSI Eşik Değeri", 10, 70, 40)
 baslat = st.sidebar.button("🚀 Analizi Başlat")
 
 # --- FONKSİYONLAR ---
@@ -97,21 +98,21 @@ def altin_vurus_tarama(liste):
 
 # --- ANA EKRAN ---
 if baslat:
-    liste = BIST_30 if hisse_grubu == "BIST 30" else BIST_TUM
+    secili_liste = BIST_30 if hisse_grubu == "BIST 30" else BIST_TUM
     
     if tarama_modu == "Normal Tarama":
-        sonuclar = normal_tarama(liste, secili_periyot)
+        sonuclar = normal_tarama(secili_liste, secili_periyot)
     else:
-        sonuclar = altin_vurus_tarama(liste)
+        sonuclar = altin_vurus_tarama(secili_liste)
 
     if sonuclar:
         df = pd.DataFrame(sonuclar)
-        st.success(f"Tarama tamamlandı! {len(df)} hisse bulundu.")
+        st.success(f"Analiz tamamlandı! {len(df)} hisse kriterlere uyuyor.")
         st.dataframe(df, use_container_width=True)
         
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Sonuçları İndir", csv, "tarama_sonuc.csv", "text/csv")
+        st.download_button("📥 Listeyi İndir (CSV)", csv, "bist_tarama.csv", "text/csv")
     else:
-        st.warning("Kriterlere uygun hisse bulunamadı.")
+        st.warning(f"RSI < {rsi_esik} kriterine uygun hisse bulunamadı.")
 else:
-    st.info("Lütfen soldaki menüden tarama modunu seçip 'Analizi Başlat' butonuna basın.")
+    st.info("Sol menüden ayarları yapıp 'Analizi Başlat'a tıklayın.")
